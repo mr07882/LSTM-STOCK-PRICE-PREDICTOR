@@ -131,6 +131,7 @@ def ModelPerformance(TestingData_Output, TestingPredictions, Scalar):
 
 
 def TrainModel(Model, TrainingDataset, TestingDataset, Config):
+    print("PROCESS: Training LSTM model................")
     Device = torch.device(Config["Training"]["Device"]) if isinstance(Config["Training"]["Device"], str) else Config["Training"]["Device"]
 
     TrainingDataLoader = DataLoader(TrainingDataset, batch_size=Config["Training"]["BatchSize"], shuffle=True)
@@ -147,6 +148,7 @@ def TrainModel(Model, TrainingDataset, TestingDataset, Config):
         scheduler.step()
         print(f"Epoch[{epoch+1}/{Config['Training']['EPOCHS']}] | Train Loss:{TrainingLoss:.6f} | Test Loss:{TestingLoss:.6f} | LR:{LR_Train:.6f}")
 
+    print("CHECKPOINT 1: Training Completed.")
     return Model
 
 def EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar, Config):
@@ -174,6 +176,7 @@ def EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar, Config):
     return TrainingPredictions, TestingPredictions, mape, accuracy
 
 def PredictNextDay(Model, TestingData_Input, Config):
+    print("PROCESS: Predicting next day's closing price using LSTM................")
     Device = torch.device(Config["Training"]["Device"]) if isinstance(Config["Training"]["Device"], str) else Config["Training"]["Device"]
 
     Model.eval()
@@ -205,7 +208,7 @@ def PredictNextDay(Model, TestingData_Input, Config):
     # print(f"Predicted next-day closing price: {NextDayPrice[0]:.2f}")
 
     # return float(NextDayPrice[0])
-
+    print("CHECKPOINT 3: Prediction Completed.")
     return Prediction
 
    

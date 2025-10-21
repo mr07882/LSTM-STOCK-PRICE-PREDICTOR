@@ -6,7 +6,7 @@ from LSTM_Model import LSTMModel, TrainModel , EvaluateModel , PredictNextDay
 import torch
 from Plotter import Plot
 from XGBoost_Model import TrainXGBModel , EvaluateXGBModel , PredictNextDayXGB
-
+from N_BEATS_Model import TrainNBeatsModel , EvaluateNBeatsModel , PredictNextDayNBeats
 
 while True:
         print("------------------MENU---------------------")
@@ -59,7 +59,7 @@ while True:
             TestingDataset = TimeSeriesDataset(TestingData_Input, TestingData_Output)
 
             print("DATA IS READY! ")
-            print("Models Available: LSTM, XGBOOST")
+            print("Models Available: LSTM, XGBOOST , N-BEATS")
             ModelName = input("Enter The Model Name: ").strip().upper()
 
             if ModelName == "LSTM":
@@ -126,7 +126,6 @@ while True:
                 TrainingPredictions, TestingPredictions, mape, accuracy = EvaluateXGBModel(
                     model,
                     TrainingData_Input,
-                    TrainingData_Output,
                     TestingData_Input,
                     TestingData_Output,
                     Scalar,
@@ -147,7 +146,7 @@ while True:
                         TestingPredictions=TestingPredictions
                     )
                 
-                Prediction = PredictNextDayXGB(model, TestingData_Input[-1], Scalar)
+                Prediction = PredictNextDayXGB(model, TestingData_Input[-1])
                 NextDayPrice = Plot(
                     DataDate=DataDate,
                     TrainingData_Output=None,
@@ -159,6 +158,43 @@ while True:
                     Stock=StockName,
                     mode="nextday",
                     TestingPredictions=TestingPredictions,
+                    Prediction=Prediction
+                )
+                break
+            elif ModelName == "N-BEATS":
+                #-------------PIPELINE 4--------------
+                model = TrainNBeatsModel(TrainingDataset, TestingDataset, Config)
+
+                #-------------PIPELINE 5--------------
+                train_preds, test_preds, mape, acc = EvaluateNBeatsModel(model, TrainingDataset, TestingDataset, Scalar)
+
+                Temp = Plot(
+                        DataDate=DataDate,
+                        TrainingData_Output=None,
+                        TestingData_Output=None,
+                        Scalar=Scalar,
+                        NumDataPoints=NumDataPoints,
+                        SplitIndex=SplitIndex,
+                        Config=Config,
+                        Stock=StockName,
+                        mode="predicted",
+                        DataClosePrice=DataClosePrice,
+                        TrainingPredictions=train_preds,
+                        TestingPredictions=test_preds
+                    )
+                
+                Prediction = PredictNextDayNBeats(model, TestingData_Input[-1])
+                NextDayPrice = Plot(
+                    DataDate=DataDate,
+                    TrainingData_Output=None,
+                    TestingData_Output=TestingData_Output,
+                    Scalar=Scalar,
+                    NumDataPoints=NumDataPoints,
+                    SplitIndex=SplitIndex,
+                    Config=Config,
+                    Stock=StockName,
+                    mode="nextday",
+                    TestingPredictions=test_preds,
                     Prediction=Prediction
                 )
                 break

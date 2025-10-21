@@ -1,12 +1,10 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import figure
 from sklearn.metrics import mean_absolute_percentage_error
 from xgboost import XGBRegressor
 
 
 def TrainXGBModel(TrainingData_Input, TrainingData_Output, TestingData_Input, TestingData_Output):
-    model = XGBRegressor(
+    Model = XGBRegressor(
         n_estimators=800,
         learning_rate=0.03,
         max_depth=6,
@@ -15,52 +13,40 @@ def TrainXGBModel(TrainingData_Input, TrainingData_Output, TestingData_Input, Te
         reg_lambda=1.0,
         random_state=42
     )
+    print("PROCESS: Training XGBoost model................")
+    Model.fit(TrainingData_Input, TrainingData_Output, eval_set=[(TestingData_Input, TestingData_Output)], verbose=False)
+    print("CHECKPOINT 1: Training Completed.")
+    return Model
 
-    print("Training XGBoost model...")
-    model.fit(TrainingData_Input, TrainingData_Output, eval_set=[(TestingData_Input, TestingData_Output)], verbose=False)
-    print("Training complete.")
-    return model
 
+def EvaluateXGBModel(model, TrainingData_Input, TestingData_Input, TestingData_Output, Scalar):
+    print("PROCESS: Evaluating XGBoost model on testing data................")
 
-def EvaluateXGBModel(model, TrainingData_Input, TrainingData_Output, TestingData_Input, TestingData_Output, Scalar):
-    """
-    Evaluates the trained XGBoost model on both training and validation data.
-
-    Returns
-    -------
-    TrainingPredictions, TestingPredictions, MAPE, Accuracy
-    """
-    print("Evaluating model on training and validation data...")
-
-    # Predictions
+    #PREDICTIONS MADE BY THE MODEL
     TrainingPredictions = model.predict(TrainingData_Input)
     TestingPredictions = model.predict(TestingData_Input)
 
-    # Inverse transform to actual prices (use project's scaler API)
-    try:
-        true_prices = Scalar.InverseTransformation(TestingData_Output)
-        pred_prices = Scalar.InverseTransformation(TestingPredictions)
-    except Exception:
-        # fallback to common sklearn-style scaler if method names differ
-        true_prices = Scalar.inverse_transform(TestingData_Output)
-        pred_prices = Scalar.inverse_transform(TestingPredictions)
+    # USING INVERSE TRANSFORMATIONS TO CONVERT OUTPUT INTO PRICE
+    TruePrices = Scalar.InverseTransformation(TestingData_Output)
+    PredictedPrices = Scalar.InverseTransformation(TestingPredictions)
 
-    # Calculate MAPE and Accuracy
-    MAPE = mean_absolute_percentage_error(true_prices, pred_prices) * 100
+    # EVALUATING ON THE BASIS OF MAPE AND ACCURACY
+    MAPE = mean_absolute_percentage_error(TruePrices, PredictedPrices) * 100
     Accuracy = 100 - MAPE
 
     print(f"\nRegression Accuracy (based on MAPE): {Accuracy:.2f}%")
     print(f"Mean Absolute Percentage Error (MAPE): {MAPE:.2f}%")
 
+    print("CHECKPOINT 2: Evaluation Completed.")
     return TrainingPredictions, TestingPredictions, MAPE, Accuracy
 
 
-def PredictNextDayXGB(model, LastWindow, Scalar):
+def PredictNextDayXGB(model, LastWindow):
     """
     Predicts the next day's closing price based on the latest input window.
     LastWindow should be a 1D array of length window_size.
     """
-    print("Predicting next day's closing price...")
+    print("PROCESS: Predicting next day's closing price using XGBoost................")
     arr = np.array(LastWindow)
     if arr.ndim == 2:
         arr = arr[-1]
@@ -76,6 +62,7 @@ def PredictNextDayXGB(model, LastWindow, Scalar):
     # print(f"Predicted next-day closing price: {NextDayPrice[0]:.2f}")
 
     # return float(NextDayPrice[0])
+    print("CHECKPOINT 3: Prediction Completed.")
     return Prediction
 
 
