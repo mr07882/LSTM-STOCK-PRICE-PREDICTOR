@@ -1,13 +1,10 @@
 from DataGeneration import FetchData , PlotRawData , DownloadData , GetStockFilePath
 from Configuration import Config
-from DataPrep import Normalizer , PrepDataX , PrepDataY , PlotTrainTestData , SplitData
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import figure
+from DataPrep import Normalizer , PrepDataX , PrepDataY, SplitData
 from TimeSeries import TimeSeriesDataset
-from torch.utils.data import DataLoader              #FOR DATA LOADING
-from Model import LSTMModel, TrainAndEvaluate
+from LSTM_Model import LSTMModel, TrainModel , EvaluateModel , PredictNextDay
 import torch
+from Plotter import Plot
 
 
 
@@ -54,7 +51,7 @@ while True:
             #STEP 2: SPLITTING DATA INTO TRAINING AND TESTING DATA 
             SplitIndex = int(data_y.shape[0]*Config["Data"]["DataSplitRatio"])
             TrainingData_Input, TestingData_Input, TrainingData_Output, TestingData_Output = SplitData(data_x, data_y, SplitIndex)
-            PlotTrainTestData(DataDate, TrainingData_Output, TestingData_Output, Scalar, NumDataPoints, SplitIndex, Config)
+            Temp = Plot(DataDate, TrainingData_Output, TestingData_Output, Scalar, NumDataPoints, SplitIndex, Config ,StockName, mode="split")
     
             #STEP 3:CONVERTING EACH DATA INTO TORCH DATASET 
             TrainingDataset = TimeSeriesDataset(TrainingData_Input, TrainingData_Output)
@@ -62,7 +59,7 @@ while True:
 
             #-------------PIPELINE 3--------------
             #BUILDING THE LSTM MODEL
-            model = LSTMModel(input_size=Config["Model"]["InputSize"],
+            Model = LSTMModel(input_size=Config["Model"]["InputSize"],
                               hidden_layer_size=Config["Model"]["LSTMSize"],
                               num_layers=Config["Model"]["NumOfLSTMLayers"],
                               output_size=1,
@@ -77,18 +74,43 @@ while True:
                 torch_device = torch.device(Config["Training"]["Device"]) if isinstance(Config["Training"]["Device"], str) else Config["Training"]["Device"]
  
             #STEP 2: TRAIN AND EVALUATE THE MODEL
-            TrainedModel = TrainAndEvaluate(model,
-                                            TrainingDataset,
-                                            TestingDataset,
-                                            Scalar,
-                                            TestingData_Output,
-                                            data_x_unseen,
-                                            DataDate,
-                                            DataClosePrice,
-                                            NumDataPoints,
-                                            SplitIndex,
-                                            Config)
+            Model = TrainModel(Model, TrainingDataset, TestingDataset, Config)
+            TrainingPredictions, TestingPredictions = EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar, 
+                                                                    DataDate, DataClosePrice, NumDataPoints, SplitIndex, 
+                                                                    Config)
+            Temp = Plot(
+                    DataDate=DataDate,
+                    TrainingData_Output=None,
+                    TestingData_Output=None,
+                    Scalar=Scalar,
+                    NumDataPoints=NumDataPoints,
+                    SplitIndex=SplitIndex,
+                    Config=Config,
+                    Stock=StockName,
+                    mode="predicted",
+                    DataClosePrice=DataClosePrice,
+                    TrainingPredictions=TrainingPredictions,
+                    TestingPredictions=TestingPredictions
+                )
+            
 
+            Prediction = PredictNextDay(Model, TestingData_Input, TestingData_Output, TestingPredictions,Scalar,
+                                        DataDate, NumDataPoints, SplitIndex, Config)
+            
+            NextDayPrice = Plot(
+                DataDate=DataDate,
+                TrainingData_Output=None,
+                TestingData_Output=TestingData_Output,
+                Scalar=Scalar,
+                NumDataPoints=NumDataPoints,
+                SplitIndex=SplitIndex,
+                Config=Config,
+                Stock=StockName,
+                mode="nextday",
+                TestingPredictions=TestingPredictions,
+                Prediction=Prediction
+            )
+    
             break
 
         else:

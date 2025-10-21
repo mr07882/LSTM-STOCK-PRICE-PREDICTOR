@@ -46,50 +46,6 @@ def PrepDataY(x, PredictionCycle):
     Output = x[PredictionCycle:]
     return Output
 
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import figure
-
-def PlotTrainTestData(DataDate, TrainingData_Output, TestingData_Output, Scalar, NumDataPoints, SplitIndex, Config):
-    
-    print("Preparing data for plotting...")
-    to_plot_TrainingData_Output = np.zeros(NumDataPoints)
-    to_plot_TestingData_Output = np.zeros(NumDataPoints)
-
-    cycle = Config["Data"]["PredictionCycle"]
-
-    # Reverse normalization for plotting
-    to_plot_TrainingData_Output[cycle:SplitIndex + cycle] = Scalar.InverseTransformation(TrainingData_Output)
-    to_plot_TestingData_Output[SplitIndex + cycle:] = Scalar.InverseTransformation(TestingData_Output)
-
-    # Replace zeros with None to avoid gaps
-    to_plot_TrainingData_Output = np.where(to_plot_TrainingData_Output == 0, None, to_plot_TrainingData_Output)
-    to_plot_TestingData_Output = np.where(to_plot_TestingData_Output == 0, None, to_plot_TestingData_Output)
-
-    # Plot
-    print("Plotting training and validation data...")
-    fig = figure(figsize=(25, 5), dpi=80)
-    fig.patch.set_facecolor((1.0, 1.0, 1.0))
-
-    plt.plot(DataDate, to_plot_TrainingData_Output, label="Prices (train)", color=Config["Plots"]["color_train"])
-    plt.plot(DataDate, to_plot_TestingData_Output, label="Prices (validation)", color=Config["Plots"]["color_val"])
-
-    xticks = [
-        DataDate[i] if (
-            (i % Config["Plots"]["X-Interval"] == 0 and (NumDataPoints - i) > Config["Plots"]["X-Interval"])
-            or i == NumDataPoints - 1
-        ) else None for i in range(NumDataPoints)
-    ]
-    x = np.arange(0, len(xticks))
-
-    plt.xticks(x, xticks, rotation='vertical')
-    plt.title("Daily close prices for " + Config["AlphaVantage"]["Stock"] + " - showing training and validation data")
-    plt.grid(True, which='major', axis='y', linestyle='--')
-    plt.legend()
-    plt.show()
-
-
-
 def SplitData(data_x, data_y, SplitIndex):
     TrainingData_Input = data_x[:SplitIndex]
     TestingData_Input = data_x[SplitIndex:]
