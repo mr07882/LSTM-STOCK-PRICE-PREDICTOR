@@ -169,9 +169,9 @@ def EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar, Config):
         TestingPredictions = np.concatenate((TestingPredictions, out))
 
     # Evaluate MAPE/Accuracy
-    ModelPerformance(TestingDataset.y, TestingPredictions, Scalar)
+    mape, accuracy = ModelPerformance(TestingDataset.y, TestingPredictions, Scalar)
 
-    return TrainingPredictions, TestingPredictions
+    return TrainingPredictions, TestingPredictions, mape, accuracy
 
 def PredictNextDay(Model, TestingData_Input, Config):
     Device = torch.device(Config["Training"]["Device"]) if isinstance(Config["Training"]["Device"], str) else Config["Training"]["Device"]
@@ -195,6 +195,16 @@ def PredictNextDay(Model, TestingData_Input, Config):
     with torch.no_grad():
         Prediction = Model(x)
         Prediction = Prediction.cpu().detach().numpy()
+
+    # Inverse transform to price scale
+    # try:
+    #     NextDayPrice = Scalar.InverseTransformation(Prediction)
+    # except Exception:
+    #     NextDayPrice = Scalar.inverse_transform(Prediction)
+
+    # print(f"Predicted next-day closing price: {NextDayPrice[0]:.2f}")
+
+    # return float(NextDayPrice[0])
 
     return Prediction
 

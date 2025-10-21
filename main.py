@@ -84,7 +84,7 @@ while True:
 
                 #-------------PIPELINE 5--------------
                 #STEP 1: EVALUATE THE MODEL ON TRAINING AND TESTING DATA
-                TrainingPredictions, TestingPredictions = EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar,Config)
+                TrainingPredictions, TestingPredictions, mape , accuracy = EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar,Config)
                                                                                                 
                 Temp = Plot(
                         DataDate=DataDate,
@@ -119,12 +119,49 @@ while True:
                 )
                 break
             elif ModelName == "XGBOOST":
-                #-------------PIPELINE 3--------------
-                Model = TrainXGBModel(TrainingData_Input, TrainingData_Output, TestingData_Input, TestingData_Output)
-                mape, accuracy, TestingPredictions = EvaluateXGBModel(Model, TestingData_Input, TestingData_Output, Scalar)
-                NextDayPrice = PredictNextDayXGB(Model, TestingData_Input[-1], Scalar)
+                #-------------PIPELINE 4--------------
+                model = TrainXGBModel(TrainingData_Input, TrainingData_Output, TestingData_Input, TestingData_Output)
+                
+                #-------------PIPELINE 5--------------
+                TrainingPredictions, TestingPredictions, mape, accuracy = EvaluateXGBModel(
+                    model,
+                    TrainingData_Input,
+                    TrainingData_Output,
+                    TestingData_Input,
+                    TestingData_Output,
+                    Scalar,
+                )
 
-
+                Temp = Plot(
+                        DataDate=DataDate,
+                        TrainingData_Output=None,
+                        TestingData_Output=None,
+                        Scalar=Scalar,
+                        NumDataPoints=NumDataPoints,
+                        SplitIndex=SplitIndex,
+                        Config=Config,
+                        Stock=StockName,
+                        mode="predicted",
+                        DataClosePrice=DataClosePrice,
+                        TrainingPredictions=TrainingPredictions,
+                        TestingPredictions=TestingPredictions
+                    )
+                
+                #NextDayPrice = PredictNextDayXGB(model, TestingData_Input[-1], Scalar)
+                Prediction = PredictNextDayXGB(model, TestingData_Input[-1], Scalar)
+                NextDayPrice = Plot(
+                    DataDate=DataDate,
+                    TrainingData_Output=None,
+                    TestingData_Output=TestingData_Output,
+                    Scalar=Scalar,
+                    NumDataPoints=NumDataPoints,
+                    SplitIndex=SplitIndex,
+                    Config=Config,
+                    Stock=StockName,
+                    mode="nextday",
+                    TestingPredictions=TestingPredictions,
+                    Prediction=Prediction
+                )
                 break
 
         else:
