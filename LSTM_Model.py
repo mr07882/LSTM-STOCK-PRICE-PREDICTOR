@@ -149,7 +149,7 @@ def TrainModel(Model, TrainingDataset, TestingDataset, Config):
 
     return Model
 
-def EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar, DataDate, DataClosePrice, NumOfDataPoints, SplitIndex, Config):
+def EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar, Config):
     Device = torch.device(Config["Training"]["Device"]) if isinstance(Config["Training"]["Device"], str) else Config["Training"]["Device"]
 
     TrainingLoader = DataLoader(TrainingDataset, batch_size=Config["Training"]["BatchSize"], shuffle=False)
@@ -173,7 +173,7 @@ def EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar, DataDate, Data
 
     return TrainingPredictions, TestingPredictions
 
-def PredictNextDay(Model, TestingData_Input, TestingData_Output, TestingPredictions, Scalar, DataDate, NumOfDataPoints, SplitIndex, Config):
+def PredictNextDay(Model, TestingData_Input, Config):
     Device = torch.device(Config["Training"]["Device"]) if isinstance(Config["Training"]["Device"], str) else Config["Training"]["Device"]
 
     Model.eval()

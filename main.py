@@ -5,7 +5,7 @@ from TimeSeries import TimeSeriesDataset
 from LSTM_Model import LSTMModel, TrainModel , EvaluateModel , PredictNextDay
 import torch
 from Plotter import Plot
-
+from XGBoost_Model import TrainXGBModel , EvaluateXGBModel , PredictNextDayXGB
 
 
 while True:
@@ -29,6 +29,7 @@ while True:
             break
 
         elif Choice == "2":
+            
             print("Available Stocks: AMZN, MSFT, NVDA, GOOG, META, INTC, TSLA, WMT, NKE, MCD")
             StockName = input("Enter the stock name: ").strip().upper()
             print(f"Predicting closing price for {StockName}...")
@@ -57,61 +58,74 @@ while True:
             TrainingDataset = TimeSeriesDataset(TrainingData_Input, TrainingData_Output)
             TestingDataset = TimeSeriesDataset(TestingData_Input, TestingData_Output)
 
-            #-------------PIPELINE 3--------------
-            #BUILDING THE LSTM MODEL
-            Model = LSTMModel(input_size=Config["Model"]["InputSize"],
-                              hidden_layer_size=Config["Model"]["LSTMSize"],
-                              num_layers=Config["Model"]["NumOfLSTMLayers"],
-                              output_size=1,
-                              dropout=Config["Model"]["Dropout"]) 
+            print("DATA IS READY! ")
+            print("Models Available: LSTM, XGBOOST")
+            ModelName = input("Enter The Model Name: ").strip().upper()
 
-            #-------------PIPELINE 4--------------
+            if ModelName == "LSTM":
+                #-------------PIPELINE 3--------------
+                #BUILDING THE LSTM MODEL
+                Model = LSTMModel(input_size=Config["Model"]["InputSize"],
+                                hidden_layer_size=Config["Model"]["LSTMSize"],
+                                num_layers=Config["Model"]["NumOfLSTMLayers"],
+                                output_size=1,
+                                dropout=Config["Model"]["Dropout"]) 
 
-            #STEP 1: DECIDING WHETHER CPU OR GPU SHOULD BE USED FOR TRAINING THE MODEL
-            if isinstance(Config["Training"]["Device"], str) and Config["Training"]["Device"] == "cpu":
-                torch_device = torch.device('cpu')
-            else:
-                torch_device = torch.device(Config["Training"]["Device"]) if isinstance(Config["Training"]["Device"], str) else Config["Training"]["Device"]
- 
-            #STEP 2: TRAIN AND EVALUATE THE MODEL
-            Model = TrainModel(Model, TrainingDataset, TestingDataset, Config)
-            TrainingPredictions, TestingPredictions = EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar, 
-                                                                    DataDate, DataClosePrice, NumDataPoints, SplitIndex, 
-                                                                    Config)
-            Temp = Plot(
+                #-------------PIPELINE 4--------------
+
+                #STEP 1: DECIDING WHETHER CPU OR GPU SHOULD BE USED FOR TRAINING THE MODEL
+                if isinstance(Config["Training"]["Device"], str) and Config["Training"]["Device"] == "cpu":
+                    torch_device = torch.device('cpu')
+                else:
+                    torch_device = torch.device(Config["Training"]["Device"]) if isinstance(Config["Training"]["Device"], str) else Config["Training"]["Device"]
+    
+                #STEP 2: TRAIN AND EVALUATE THE MODEL
+                Model = TrainModel(Model, TrainingDataset, TestingDataset, Config)
+
+                #-------------PIPELINE 5--------------
+                #STEP 1: EVALUATE THE MODEL ON TRAINING AND TESTING DATA
+                TrainingPredictions, TestingPredictions = EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar,Config)
+                                                                                                
+                Temp = Plot(
+                        DataDate=DataDate,
+                        TrainingData_Output=None,
+                        TestingData_Output=None,
+                        Scalar=Scalar,
+                        NumDataPoints=NumDataPoints,
+                        SplitIndex=SplitIndex,
+                        Config=Config,
+                        Stock=StockName,
+                        mode="predicted",
+                        DataClosePrice=DataClosePrice,
+                        TrainingPredictions=TrainingPredictions,
+                        TestingPredictions=TestingPredictions
+                    )
+                
+                #STEP 2: PREDICT THE CLOSE PRICE FOR THE NEXT DAY
+                Prediction = PredictNextDay(Model, TestingData_Input,Config)
+                                            
+                NextDayPrice = Plot(
                     DataDate=DataDate,
                     TrainingData_Output=None,
-                    TestingData_Output=None,
+                    TestingData_Output=TestingData_Output,
                     Scalar=Scalar,
                     NumDataPoints=NumDataPoints,
                     SplitIndex=SplitIndex,
                     Config=Config,
                     Stock=StockName,
-                    mode="predicted",
-                    DataClosePrice=DataClosePrice,
-                    TrainingPredictions=TrainingPredictions,
-                    TestingPredictions=TestingPredictions
+                    mode="nextday",
+                    TestingPredictions=TestingPredictions,
+                    Prediction=Prediction
                 )
-            
+                break
+            elif ModelName == "XGBOOST":
+                #-------------PIPELINE 3--------------
+                Model = TrainXGBModel(TrainingData_Input, TrainingData_Output, TestingData_Input, TestingData_Output)
+                mape, accuracy, TestingPredictions = EvaluateXGBModel(Model, TestingData_Input, TestingData_Output, Scalar)
+                NextDayPrice = PredictNextDayXGB(Model, TestingData_Input[-1], Scalar)
 
-            Prediction = PredictNextDay(Model, TestingData_Input, TestingData_Output, TestingPredictions,Scalar,
-                                        DataDate, NumDataPoints, SplitIndex, Config)
-            
-            NextDayPrice = Plot(
-                DataDate=DataDate,
-                TrainingData_Output=None,
-                TestingData_Output=TestingData_Output,
-                Scalar=Scalar,
-                NumDataPoints=NumDataPoints,
-                SplitIndex=SplitIndex,
-                Config=Config,
-                Stock=StockName,
-                mode="nextday",
-                TestingPredictions=TestingPredictions,
-                Prediction=Prediction
-            )
-    
-            break
+
+                break
 
         else:
             print("Invalid input, please try again.\n")
