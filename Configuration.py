@@ -2,7 +2,7 @@ Config = {
     "AlphaVantage": {
         "API_KEY": "BMSUSFGHEXX2LRNZ",       # https://www.alphavantage.co/support/#api-key
         "Stock": "AMZN",                     #NVDA , AMZN , MSFT #TARGET STOCK
-        "Outputsize": "full",                #FETCH ENITRE TIME SERIES DATA
+        "Outputsize": "full",                #FETCH ENITRE TIME SERIES DATA IE FROM TIME AVAILABLE TILL TODAY 
         "InputFeature": "4. close",          #FEATURE TO BE USED FROM TIME SERIES DATA: CLOSING STOCK PRICE 
     },
     "Data": {  

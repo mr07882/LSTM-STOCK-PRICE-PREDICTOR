@@ -147,7 +147,6 @@ while True:
                         TestingPredictions=TestingPredictions
                     )
                 
-                #NextDayPrice = PredictNextDayXGB(model, TestingData_Input[-1], Scalar)
                 Prediction = PredictNextDayXGB(model, TestingData_Input[-1], Scalar)
                 NextDayPrice = Plot(
                     DataDate=DataDate,
