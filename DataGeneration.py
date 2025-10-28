@@ -56,14 +56,38 @@ def FetchData(FilePath, Config):
     return DataDate, DataClosePrice, NumDataPoints, DateRange
 
 
-def PlotRawData(DataDate, DataClosePrice, NumDataPoints, DateRange, Config):
+def PlotRawData(DataDate, DataClosePrice, NumDataPoints, DateRange, Config, StockName=None):
+    """
+    Plot raw close price and save the figure to the PlotImages folder. If StockName is
+    provided the file will be saved as {StockName}_raw.png, otherwise as raw.png.
+    """
     fig = figure(figsize=(25, 5), dpi=80)
     fig.patch.set_facecolor((1.0, 1.0, 1.0))
     plt.plot(DataDate, DataClosePrice, color=Config["Plots"]["color_actual"])
     xticks = [DataDate[i] if ((i%Config["Plots"]["X-Interval"]==0 and (NumDataPoints-i) > Config["Plots"]["X-Interval"]) or i==NumDataPoints-1) else None for i in range(NumDataPoints)] 
     x = np.arange(0,len(xticks))
     plt.xticks(x, xticks, rotation='vertical')
-    plt.title("Daily close price for " + Config["AlphaVantage"]["InputFeature"] + ", " + DateRange)
+    plt.title("Daily close price for " + (StockName if StockName is not None else Config["AlphaVantage"]["InputFeature"]) + ", " + DateRange)
     plt.grid(True, which='major', axis='y', linestyle='--')
-    plt.show()
+
+    # Save the plot to PlotImages (match Plotter's save directory)
+    save_dir = os.path.join(os.path.dirname(__file__), "PlotImages")
+    # also include the absolute path used elsewhere for robustness
+    abs_dir = r"C:\Users\sense\Desktop\SEMESTER 7\Artificial Intelligence\Project\PlotImages"
+    os.makedirs(save_dir, exist_ok=True)
+    os.makedirs(abs_dir, exist_ok=True)
+
+    fname = f"{StockName}_raw.png" if StockName else "raw.png"
+    save_path = os.path.join(save_dir, fname)
+    try:
+        fig.savefig(save_path, bbox_inches="tight")
+        # also save to the absolute path used by other plotters for consistency
+        alt_save = os.path.join(abs_dir, fname)
+        if alt_save != save_path:
+            fig.savefig(alt_save, bbox_inches="tight")
+        print(f"Saved raw plot: {save_path}")
+    except Exception as e:
+        print("Failed to save raw plot:", e)
+
+    plt.close(fig)
 

@@ -7,7 +7,7 @@ Then, we create input–output pairs using a sliding window approach. Here’s w
 The whole dataset is then split into training data (80%) and validation data (20%). Training data teaches the model, and validation data tests how well it learned.
 Finally, we convert these arrays into PyTorch datasets — a special format that the PyTorch library can easily work with. We wrap them into DataLoaders, which automatically feed small batches of data to the model during training.
 
-Pipeline 3: Building the LSTM Model
+Pipeline 3: Training The Model
 This is where we define the neural network, specifically a type called LSTM (Long Short-Term Memory).
 An LSTM is good at understanding sequences — like time series — because it can “remember” information from earlier time steps while processing later ones.
 Here’s what each part of our model does:
@@ -21,7 +21,6 @@ Dropout layer: During training, dropout randomly turns off some units (20% of th
 Output layer: After the LSTM finishes reading the sequence, the last hidden outputs are flattened and passed to a final linear layer that predicts one number — the next day’s closing price (still in normalized form).
 All layers are connected in a forward flow: input → linear + ReLU → LSTM → dropout → output. The model learns through repeated updates to its internal weights.
 
-Pipeline 4: Training the LSTM
 Once the model is built, we start training it — which means teaching it to minimize the difference between its predictions and the real prices.
 For this, we use:
 
@@ -33,7 +32,7 @@ Learning rate: Starts at 0.01 and becomes smaller every 40 epochs, allowing the 
 During each epoch (training round), the model sees all batches of training data, makes predictions, compares them with real values, and updates itself.
 After each epoch, the model is also tested on the validation set (data it hasn’t seen before) to check if it’s learning general patterns and not just memorizing. The training and validation loss are printed every time so you can see if it’s improving.
 
-Pipeline 5: Testing and Predicting
+Pipeline 4: Testing and Predicting
 When training is finished, the model is ready to make predictions.
 First, we let it predict prices for the training and validation sets again, to check how close its predictions are to the real prices. Then we convert those normalized predictions back into real price values (by undoing the normalization).
 To measure how accurate the model is, we use MAPE (Mean Absolute Percentage Error) — it tells us the average percentage error between the true and predicted prices. For example, if MAPE = 4%, that means on average the model’s predictions are 4% off from the real prices.

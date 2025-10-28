@@ -1,8 +1,11 @@
-
+import os
 import numpy as np
+import matplotlib
+# Use a non-interactive backend to avoid opening GUI windows when plotting from
+# background threads. We still create figures and save them to disk.
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
-
 
 def Plot(
     DataDate,
@@ -27,7 +30,15 @@ def Plot(
     "split"     : Plots training vs validation actual data (original)
     "predicted" : Plots actual vs predicted prices (full)
     "nextday"   : Plots last few days + predicted next-day price
+
+    NOTE:
+    Always saves the plots automatically to:
+    C:\\Users\\sense\\Desktop\\SEMESTER 7\\Artificial Intelligence\\Project\\PlotImages
     """
+
+    # Fixed save directory
+    save_dir = r"C:\Users\sense\Desktop\SEMESTER 7\Artificial Intelligence\Project\PlotImages"
+    os.makedirs(save_dir, exist_ok=True)
 
     print(f"Preparing data for plotting ({mode})...")
     cycle = Config["Data"]["PredictionCycle"]
@@ -47,21 +58,20 @@ def Plot(
 
         print("Plotting training and validation data...")
         fig = figure(figsize=(25, 5), dpi=80)
-        fig.patch.set_facecolor((1.0, 1.0, 1.0))
+        fig.patch.set_facecolor("white")
         plt.plot(DataDate, to_plot_TrainingData_Output, label="Prices (train)", color=Config["Plots"]["color_train"])
         plt.plot(DataDate, to_plot_TestingData_Output, label="Prices (validation)", color=Config["Plots"]["color_val"])
-
-        xticks = [
-            DataDate[i] if (
-                (i % Config["Plots"]["X-Interval"] == 0 and (NumDataPoints - i) > Config["Plots"]["X-Interval"])
-                or i == NumDataPoints - 1
-            ) else None for i in range(NumDataPoints)
-        ]
-        plt.xticks(np.arange(0, len(xticks)), xticks, rotation='vertical')
         plt.title("Daily close prices for " + Stock + " - showing training and validation data")
-        plt.grid(True, which='major', axis='y', linestyle='--')
+        plt.grid(True, which="major", axis="y", linestyle="--")
         plt.legend()
-        plt.show()
+
+        # Save plot
+        save_path = os.path.join(save_dir, f"{Stock}_split.png")
+        fig.savefig(save_path, bbox_inches="tight")
+        print(f"Saved plot: {save_path}")
+
+        # Close the figure instead of showing it (avoids GUI issues in threads)
+        plt.close(fig)
         return None
 
     # ---------------------------------------------------------------
@@ -82,23 +92,21 @@ def Plot(
 
         print("Plotting predicted vs actual prices...")
         fig = figure(figsize=(25, 5), dpi=80)
-        fig.patch.set_facecolor((1.0, 1.0, 1.0))
+        fig.patch.set_facecolor("white")
         plt.plot(DataDate, DataClosePrice, label="Actual prices", color=Config["Plots"]["color_actual"])
         plt.plot(DataDate, to_plot_data_y_train_pred, label="Predicted prices (train)", color=Config["Plots"]["color_pred_train"])
         plt.plot(DataDate, to_plot_data_y_val_pred, label="Predicted prices (validation)", color=Config["Plots"]["color_pred_val"])
-
-        xticks = [
-            DataDate[i] if (
-                (i % Config["Plots"]["X-Interval"] == 0 and (NumDataPoints - i) > Config["Plots"]["X-Interval"])
-                or i == NumDataPoints - 1
-            ) else None for i in range(NumDataPoints)
-        ]
-        plt.xticks(np.arange(0, len(xticks)), xticks, rotation='vertical')
         plt.title("Compare predicted prices to actual prices")
-        plt.grid(True, which='major', axis='y', linestyle='--')
+        plt.grid(True, which="major", axis="y", linestyle="--")
         plt.legend()
-        plt.show()
 
+        # Save plot
+        save_path = os.path.join(save_dir, f"{Stock}_predicted.png")
+        fig.savefig(save_path, bbox_inches="tight")
+        print(f"Saved plot: {save_path}")
+
+        # Close the figure instead of showing it
+        plt.close(fig)
         return None
 
     # ---------------------------------------------------------------
@@ -128,21 +136,24 @@ def Plot(
         plot_date_test.append("tomorrow")
 
         fig = figure(figsize=(25, 5), dpi=80)
-        fig.patch.set_facecolor((1.0, 1.0, 1.0))
+        fig.patch.set_facecolor("white")
         plt.plot(plot_date_test, to_plot_data_y_val, label="Actual prices", marker=".", markersize=10, color=Config["Plots"]["color_actual"])
         plt.plot(plot_date_test, to_plot_data_y_val_pred, label="Past predicted prices", marker=".", markersize=10, color=Config["Plots"]["color_pred_val"])
-        plt.plot(plot_date_test, to_plot_data_y_test_pred, label="Predicted price for next day", marker=".", markersize=20, color=Config["Plots"]["color_pred_test"])
+        plt.plot(plot_date_test, to_plot_data_y_test_pred, label="Predicted price for next day", marker="*", markersize=18, color=Config["Plots"]["color_pred_test"])
         plt.title("Predicting the close price of the next trading day")
-        plt.grid(True, which='major', axis='y', linestyle='--')
+        plt.grid(True, which="major", axis="y", linestyle="--")
         plt.legend()
-        plt.show()
 
+        # Save plot
+        save_path = os.path.join(save_dir, f"{Stock}_nextday.png")
+        fig.savefig(save_path, bbox_inches="tight")
+        print(f"Saved plot: {save_path}")
+
+        # Close the figure instead of showing it
+        plt.close(fig)
         NextDayPrice = to_plot_data_y_test_pred[plot_range - 1]
         print(f"Predicted close price of the next trading day: {round(NextDayPrice, 2)}")
         return NextDayPrice
-        
 
     else:
         raise ValueError("Invalid mode. Choose 'split', 'predicted', or 'nextday'.")
-
-
