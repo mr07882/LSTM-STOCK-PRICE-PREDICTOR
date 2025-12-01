@@ -19,23 +19,33 @@ At the end of this step, we have a clean csv containing daily closing
 prices ready for processing.
 '''
 
-def DownloadData(Config, StockName , SavePath="Data"):
-
-    #CREATE DIRECTORY IF IT DOESN'T EXIST
-    os.makedirs(SavePath, exist_ok=True)   
+def DownloadData(Config, StockName, SavePath="Data"):
+    # CREATE DIRECTORY IF IT DOESN'T EXIST
+    os.makedirs(SavePath, exist_ok=True)
     FilePath = os.path.join(SavePath, f"{StockName}_daily.csv")
 
-    #FETCH DATA FROM ALPHA VANTAGE API
+    # FETCH DATA FROM ALPHA VANTAGE API
     ts = TimeSeries(key=Config["AlphaVantage"]["API_KEY"])
     data, _ = ts.get_daily(StockName, outputsize=Config["AlphaVantage"]["Outputsize"])
 
-    #CONVERT DATA INTO A DATAFRAME AND SAVE AS CSV
-    df = pd.DataFrame.from_dict(data, orient="index")
-    df.index.name = "date"
-    df.sort_index(inplace=True)
-    df.to_csv(FilePath)
+    # CONVERT DATA INTO A DATAFRAME
+    new_df = pd.DataFrame.from_dict(data, orient="index")
+    new_df.index.name = "date"
+    new_df.sort_index(inplace=True)
 
-    print(f"Data saved locally at: {FilePath}")
+    if os.path.exists(FilePath):
+        # IF FILE EXISTS, APPEND NEW DATA
+        existing_df = pd.read_csv(FilePath, index_col="date")
+        combined_df = pd.concat([existing_df, new_df])
+        combined_df = combined_df[~combined_df.index.duplicated(keep="last")]
+        combined_df.sort_index(inplace=True)
+        combined_df.to_csv(FilePath)
+        print(f"Data updated and saved locally at: {FilePath}")
+    else:
+        # IF FILE DOES NOT EXIST, CREATE NEW FILE
+        new_df.to_csv(FilePath)
+        print(f"Data saved locally at: {FilePath}")
+
     return FilePath
 
 def GetStockFilePath(StockName, SavePath="Data"):

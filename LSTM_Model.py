@@ -95,24 +95,7 @@ def run_epoch(dataloader, model, optimizer, criterion, scheduler, config, is_tra
 import numpy as np
 
 def ModelPerformance(TestingData_Output, TestingPredictions, Scalar):
-    """
-    Evaluates model performance using MAPE and Accuracy.
-
-    Parameters
-    ----------
-    TestingData_Output : np.ndarray
-        The actual target values from validation/testing set (normalized).
-    TestingPredictions : np.ndarray
-        The model's predicted values for validation/testing set (normalized).
-    Scalar : object
-        The scaler/normalizer used for inverse transformation.
-
-    Returns
-    -------
-    tuple : (mape, accuracy)
-        MAPE: Mean Absolute Percentage Error (%)
-        Accuracy: Regression accuracy (%)
-    """
+    
 
     # Reverse normalization for accurate comparison
     true_prices = Scalar.InverseTransformation(TestingData_Output)
@@ -149,7 +132,9 @@ def TrainModel(Model, TrainingDataset, TestingDataset, Config):
         print(f"Epoch[{epoch+1}/{Config['Training']['EPOCHS']}] | Train Loss:{TrainingLoss:.6f} | Test Loss:{TestingLoss:.6f} | LR:{LR_Train:.6f}")
 
     print("CHECKPOINT 1: Training Completed.")
+    #SaveModel(Model, 'lstm_model.pth')  # Save model weights to lstm_model.pth
     return Model
+
 
 def EvaluateModel(Model, TrainingDataset, TestingDataset, Scalar, Config):
     Device = torch.device(Config["Training"]["Device"]) if isinstance(Config["Training"]["Device"], str) else Config["Training"]["Device"]
@@ -214,3 +199,13 @@ def PredictNextDay(Model, TestingData_Input, Config):
    
     
 
+# After training the model
+def SaveLSTM(model, filename):
+    torch.save(model.state_dict(), filename)
+
+def LoadLSTM(model_class, filename, config):
+    model = model_class(input_size=1, hidden_layer_size=32, num_layers=2, output_size=1, dropout=0.2)
+    model.load_state_dict(torch.load(filename))
+    model.eval()  # Set the model to evaluation mode
+    print(f"Model loaded from {filename}")
+    return model

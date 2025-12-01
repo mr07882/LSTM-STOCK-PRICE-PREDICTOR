@@ -42,9 +42,6 @@ class NBeatsModel(nn.Module):
         return forecast  # shape [batch, 1]
 
 
-# ============================================================
-# TRAINING FUNCTION
-# ============================================================
 
 def TrainNBeatsModel(TrainingDataset, TestingDataset, Config):
     """
@@ -88,9 +85,6 @@ def TrainNBeatsModel(TrainingDataset, TestingDataset, Config):
     return model
 
 
-# ============================================================
-# EVALUATION FUNCTION
-# ============================================================
 
 def EvaluateNBeatsModel(model, TrainingDataset, TestingDataset, Scalar):
     print("PROCESS: Evaluating N-BEATS model on testing data................")
@@ -135,35 +129,9 @@ def EvaluateNBeatsModel(model, TrainingDataset, TestingDataset, Scalar):
     return train_preds, test_preds, MAPE, Accuracy
 
 
-# ============================================================
-# PREDICTION FUNCTION
-# ============================================================
-
-# def PredictNextDayNBeats(model, LastWindow, Scalar):
-#     """
-#     Predicts next day's closing price using the trained N-BEATS model.
-#     """
-#     print("PROCESS: Predicting next day's closing price using N-BEATS................")
-
-    
-#     device = next(model.parameters()).device
-#     model.eval()
-
-#     # Ensure proper shape: [1, seq_len, 1]
-#     x = torch.tensor(LastWindow).float().unsqueeze(0).unsqueeze(2).to(device)
-#     with torch.no_grad():
-#         pred = model(x).squeeze(-1).cpu().numpy()
-
-#     # NextDayPrice = Scalar.InverseTransformation(pred)
-#     print(f"Predicted next-day closing price: {float(pred[0]):.2f}")
-#     print("CHECKPOINT 3: Prediction Completed.")
-#     return float(pred[0])
 
 def PredictNextDayNBeats(model, LastWindow):
-    """
-    Predicts the next day's closing price using the trained N-BEATS model.
-    LastWindow should be a 1D array (or 2D with a single row) of length window_size.
-    """
+   
     print("PROCESS: Predicting next day's closing price using N-BEATS................")
 
     # Convert to numpy array

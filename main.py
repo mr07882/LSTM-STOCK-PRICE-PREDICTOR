@@ -46,8 +46,8 @@ while True:
             #STEP 1: NORMALIZE DATA BETWEEN [-1, 1]
             Scalar = Normalizer()
             NormalizedDataClosePrice = Scalar.FitTransformation(DataClosePrice)
-            data_x, data_x_unseen = PrepDataX(NormalizedDataClosePrice, PredictionCycle=Config["Data"]["PredictionCycle"])
-            data_y = PrepDataY(NormalizedDataClosePrice, PredictionCycle=Config["Data"]["PredictionCycle"])
+            data_x, data_x_unseen = PrepDataX(NormalizedDataClosePrice, PredictionCycle=Config["Data"]["PredictionCycle"])   #BREAKING INTO 60-60 DAY CYCLES
+            data_y = PrepDataY(NormalizedDataClosePrice, PredictionCycle=Config["Data"]["PredictionCycle"])                  #ONE PREDICTION FOR EACH CYCLE
 
             #STEP 2: SPLITTING DATA INTO TRAINING AND TESTING DATA 
             SplitIndex = int(data_y.shape[0]*Config["Data"]["DataSplitRatio"])

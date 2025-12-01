@@ -15,7 +15,8 @@ from XGBoost_Model import TrainXGBModel, EvaluateXGBModel, PredictNextDayXGB
 from N_BEATS_Model import TrainNBeatsModel, EvaluateNBeatsModel, PredictNextDayNBeats
 from Plotter import Plot
 
-STOCKS = ["AMZN", "MSFT", "NVDA", "GOOG", "META", "INTC", "TSLA", "WMT", "NKE", "MCD"]
+
+STOCKS = ["AAPL", "ADBE", "AMZN", "ASML", "GOOG", "IBM", "INTC", "MCD", "META" , "MSFT", "NFLX" , "NKE" , "NVDA" , "ORCL" , "SONY" , "TSLA" , "WMT" ]
 MODELS = ["LSTM", "XGBOOST", "N-BEATS"]
 
 # Color scheme
@@ -58,6 +59,10 @@ class StockPredictorUI(tk.Tk):
         self.training_preds = None
         self.testing_preds = None
         self.prediction_next = None
+        # Results display variables
+        self.result_nextday_var = tk.StringVar(value="N/A")
+        self.result_acc_var = tk.StringVar(value="N/A")
+        self.result_mape_var = tk.StringVar(value="N/A")
         
         self._build_ui()
     
@@ -120,9 +125,58 @@ class StockPredictorUI(tk.Tk):
                            font=('Segoe UI', 10))
         subtitle.pack(side=tk.LEFT, padx=(0, 20))
         
-        # Main container
-        main = tk.Frame(self, bg=COLORS['bg_primary'])
-        main.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=15, pady=15)
+        # Refresh button to clear saved plot images and UI plots
+        btn_refresh = self._create_action_button(header, "🔄 Refresh", self._refresh, COLORS['accent_purple'])
+        btn_refresh.pack(side=tk.RIGHT, padx=20, pady=16)
+        
+        # Status area moved to the top-right near the refresh button
+        status_frame = tk.Frame(header, bg=COLORS['bg_tertiary'], relief='flat', bd=0)
+        status_frame.pack(side=tk.RIGHT, padx=(0, 20), pady=16)
+
+        status_label = tk.Label(status_frame, text="STATUS",
+                               bg=COLORS['bg_tertiary'], fg=COLORS['text_secondary'],
+                               font=('Segoe UI', 9, 'bold'))
+        status_label.pack(anchor=tk.W, padx=5, pady=(0, 5))
+
+        self.status = tk.Label(status_frame, text="Ready",
+                              bg=COLORS['bg_tertiary'], fg=COLORS['accent_green'],
+                              font=('Segoe UI', 10), anchor=tk.W)
+        self.status.pack(fill=tk.X, padx=5, pady=(0, 5))
+        
+        # Main container (scrollable)
+        body = tk.Frame(self, bg=COLORS['bg_primary'])
+        body.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=15, pady=15)
+
+        canvas = tk.Canvas(body, bg=COLORS['bg_primary'], highlightthickness=0)
+        v_scroll = ttk.Scrollbar(body, orient='vertical', command=canvas.yview)
+        canvas.configure(yscrollcommand=v_scroll.set)
+
+        v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # This frame will hold the actual UI content and live inside the canvas
+        main = tk.Frame(canvas, bg=COLORS['bg_primary'])
+        canvas.create_window((0, 0), window=main, anchor='nw')
+
+        # Keep the scrollregion updated
+        def _on_frame_config(event):
+            try:
+                canvas.configure(scrollregion=canvas.bbox('all'))
+            except Exception:
+                pass
+
+        main.bind('<Configure>', _on_frame_config)
+
+        # Mouse wheel scrolling (Windows)
+        def _on_mousewheel(event):
+            # event.delta is multiple of 120 on Windows
+            try:
+                canvas.yview_scroll(int(-1 * (event.delta / 120)), 'units')
+            except Exception:
+                pass
+
+        # Bind to the canvas so scrolling works when pointer is over the UI
+        canvas.bind_all('<MouseWheel>', _on_mousewheel)
         
         # Left panel (controls)
         left = tk.Frame(main, bg=COLORS['bg_secondary'], width=300)
@@ -174,25 +228,11 @@ class StockPredictorUI(tk.Tk):
         btn_prepare.pack(fill=tk.X, pady=(0, 10))
         
         btn_train = self._create_action_button(left_inner, "🚀 Train & Predict", 
-                                                self._train_and_predict, COLORS['accent_orange'])
+                                                self._train_and_predict, COLORS['accent_orange'] )
         btn_train.pack(fill=tk.X, pady=(0, 10))
         
         # Spacer
         tk.Frame(left_inner, bg=COLORS['bg_secondary'], height=20).pack()
-        
-        # Status panel
-        status_frame = tk.Frame(left_inner, bg=COLORS['bg_tertiary'], relief='flat', bd=0)
-        status_frame.pack(fill=tk.X, side=tk.BOTTOM)
-        
-        status_label = tk.Label(status_frame, text="STATUS", 
-                               bg=COLORS['bg_tertiary'], fg=COLORS['text_secondary'],
-                               font=('Segoe UI', 9, 'bold'))
-        status_label.pack(anchor=tk.W, padx=15, pady=(15, 5))
-        
-        self.status = tk.Label(status_frame, text="Ready", 
-                              bg=COLORS['bg_tertiary'], fg=COLORS['accent_green'],
-                              font=('Segoe UI', 10), anchor=tk.W)
-        self.status.pack(fill=tk.X, padx=15, pady=(0, 15))
         
         # Right panel (visualization)
         right = tk.Frame(main, bg=COLORS['bg_primary'])
@@ -208,23 +248,44 @@ class StockPredictorUI(tk.Tk):
         self._create_plot_tab("🎯 Predictions", 'fig_pred', 'ax_pred', 'canvas_pred')
         self._create_plot_tab("🔮 Next Day", 'fig_next', 'ax_next', 'canvas_next')
         
-        # Metrics panel
-        metrics_frame = tk.Frame(right, bg=COLORS['bg_secondary'], relief='flat', bd=0)
-        metrics_frame.pack(fill=tk.X)
-        
-        metrics_header = tk.Label(metrics_frame, text="PERFORMANCE METRICS", 
-                                 bg=COLORS['bg_secondary'], fg=COLORS['accent_blue'],
-                                 font=('Segoe UI', 10, 'bold'))
-        metrics_header.pack(anchor=tk.W, padx=15, pady=(10, 5))
-        
-        self.metrics = tk.Text(metrics_frame, height=4, bg=COLORS['bg_tertiary'],
-                              fg=COLORS['text_primary'], font=('Consolas', 10),
-                              relief='flat', borderwidth=0, padx=10, pady=10)
-        self.metrics.pack(fill=tk.X, padx=15, pady=(0, 15))
-        
-        # Initial message
-        self.metrics.insert(tk.END, "No metrics available yet. Train a model to see results.")
-        self.metrics.config(state='disabled')
+        # Results panel (Next Day Price, Accuracy, MAPE)
+        results_frame = tk.Frame(right, bg=COLORS['bg_secondary'], relief='flat', bd=0)
+        results_frame.pack(fill=tk.X, side=tk.BOTTOM, padx=15, pady=(8, 10))
+
+        results_header = tk.Label(results_frame, text="RESULTS",
+                      bg=COLORS['bg_secondary'], fg=COLORS['accent_green'],
+                      font=('Segoe UI', 10, 'bold'))
+        results_header.grid(row=0, column=0, sticky=tk.W, padx=(5, 15))
+
+        # Next Day Price
+        lbl_next = tk.Label(results_frame, text="Next Day:",
+                    bg=COLORS['bg_secondary'], fg=COLORS['text_secondary'],
+                    font=('Segoe UI', 10))
+        lbl_next.grid(row=0, column=1, sticky=tk.W, padx=(10, 5))
+        val_next = tk.Label(results_frame, textvariable=self.result_nextday_var,
+                    bg=COLORS['bg_secondary'], fg=COLORS['text_primary'],
+                    font=('Segoe UI', 10, 'bold'))
+        val_next.grid(row=0, column=2, sticky=tk.W, padx=(0, 20))
+
+        # Accuracy
+        lbl_acc = tk.Label(results_frame, text="Accuracy:",
+                   bg=COLORS['bg_secondary'], fg=COLORS['text_secondary'],
+                   font=('Segoe UI', 10))
+        lbl_acc.grid(row=0, column=3, sticky=tk.W, padx=(10, 5))
+        val_acc = tk.Label(results_frame, textvariable=self.result_acc_var,
+                   bg=COLORS['bg_secondary'], fg=COLORS['text_primary'],
+                   font=('Segoe UI', 10, 'bold'))
+        val_acc.grid(row=0, column=4, sticky=tk.W, padx=(0, 20))
+
+        # MAPE
+        lbl_mape = tk.Label(results_frame, text="MAPE:",
+                    bg=COLORS['bg_secondary'], fg=COLORS['text_secondary'],
+                    font=('Segoe UI', 10))
+        lbl_mape.grid(row=0, column=5, sticky=tk.W, padx=(10, 5))
+        val_mape = tk.Label(results_frame, textvariable=self.result_mape_var,
+                    bg=COLORS['bg_secondary'], fg=COLORS['text_primary'],
+                    font=('Segoe UI', 10, 'bold'))
+        val_mape.grid(row=0, column=6, sticky=tk.W, padx=(0, 5))
     
     def _create_action_button(self, parent, text, command, color):
         """Create a styled action button"""
@@ -278,14 +339,45 @@ class StockPredictorUI(tk.Tk):
         NavigationToolbar2Tk(canvas, toolbar_frame)
     
     def _set_status(self, text):
-        self.status.config(text=text)
-        if "Error" in text:
-            self.status.config(fg=COLORS['accent_orange'])
-        elif "complete" in text or "prepared" in text or "Ready" in text:
-            self.status.config(fg=COLORS['accent_green'])
-        else:
-            self.status.config(fg=COLORS['accent_blue'])
-        self.update_idletasks()
+        def update_status():
+            self.status.config(text=text)
+            if "Error" in text:
+                self.status.config(fg=COLORS['accent_orange'])
+            elif "complete" in text or "prepared" in text or "Ready" in text:
+                self.status.config(fg=COLORS['accent_green'])
+            else:
+                self.status.config(fg=COLORS['accent_blue'])
+        self.after(0, update_status)
+
+    def _update_results(self, next_price, acc, mape):
+        """Update the results panel values safely on the main thread."""
+        try:
+            if next_price is None:
+                self.result_nextday_var.set("N/A")
+            else:
+                try:
+                    self.result_nextday_var.set(f"${float(next_price):.2f}")
+                except Exception:
+                    self.result_nextday_var.set(str(next_price))
+
+            if acc is None:
+                self.result_acc_var.set("N/A")
+            else:
+                try:
+                    self.result_acc_var.set(f"{float(acc):.2f}%")
+                except Exception:
+                    self.result_acc_var.set(str(acc))
+
+            if mape is None:
+                self.result_mape_var.set("N/A")
+            else:
+                try:
+                    self.result_mape_var.set(f"{float(mape):.4f}")
+                except Exception:
+                    self.result_mape_var.set(str(mape))
+        except Exception:
+            # Keep previous values if update fails
+            pass
     
     def _download_data(self):
         stock = self.selected_stock.get()
@@ -497,7 +589,14 @@ class StockPredictorUI(tk.Tk):
                 self.testing_preds = inv(test_preds)
                 
                 try:
-                    self.prediction_next = float(inv(next_pred))
+                    val = inv(next_pred)
+                    # If val is a numpy array or similar, extract a single element safely
+                    if hasattr(val, 'item'):
+                        self.prediction_next = float(val.item())
+                    elif isinstance(val, (list, tuple)) and len(val) == 1:
+                        self.prediction_next = float(val[0])
+                    else:
+                        self.prediction_next = float(val)
                 except Exception:
                     self.prediction_next = next_pred
                 
@@ -508,15 +607,13 @@ class StockPredictorUI(tk.Tk):
                     self._display_saved_plots(self.selected_stock.get())
                 except Exception:
                     pass
-                
-                self.metrics.config(state='normal')
-                self.metrics.delete(1.0, tk.END)
-                self.metrics.insert(tk.END, f"Model: {model_name}\n")
-                self.metrics.insert(tk.END, f"MAPE: {mape:.4f}\n")
-                self.metrics.insert(tk.END, f"Accuracy: {acc:.2f}%\n")
-                self.metrics.insert(tk.END, f"Next Day Prediction: ${self.prediction_next:.2f}\n")
-                self.metrics.config(state='disabled')
-                
+
+                # Update results panel on the main thread
+                try:
+                    self.after(0, lambda: self._update_results(self.prediction_next, acc, mape))
+                except Exception:
+                    pass
+
                 self._set_status("Training & Prediction complete")
                 messagebox.showinfo("Done", "Training and prediction finished")
             except Exception as e:
@@ -673,6 +770,59 @@ class StockPredictorUI(tk.Tk):
                             os.remove(path)
                         except Exception as e:
                             print(f"Error deleting file {path}: {e}")
+
+    def _refresh(self):
+        """
+        Deletes any image files in the PlotImages folders and clears all plot axes
+        displayed in the interface.
+        """
+        self._set_status("Refreshing plots...")
+
+        project_dir = os.path.dirname(__file__)
+        candidates = [os.path.join(project_dir, "PlotImages"),
+                     r"C:\Users\sense\Desktop\SEMESTER 7\Artificial Intelligence\Project\PlotImages"]
+
+        # Remove image files in candidate directories
+        removed = 0
+        for d in candidates:
+            try:
+                if os.path.isdir(d):
+                    for fname in os.listdir(d):
+                        if fname.lower().endswith(('.png', '.jpg', '.jpeg', '.svg', '.gif')):
+                            path = os.path.join(d, fname)
+                            try:
+                                os.remove(path)
+                                removed += 1
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+
+        # Clear all axes and redraw empty placeholders
+        try:
+            for ax, canvas in ((self.ax_raw, self.canvas_raw),
+                               (self.ax_split, self.canvas_split),
+                               (self.ax_pred, self.canvas_pred),
+                               (self.ax_next, self.canvas_next)):
+                try:
+                    ax.clear()
+                    ax.text(0.5, 0.5, "No plot available", ha="center", color=COLORS['text_secondary'])
+                    if hasattr(canvas, 'draw'):
+                        canvas.draw()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Also reset the results display so the UI fully refreshes
+        try:
+            self.result_nextday_var.set("N/A")
+            self.result_acc_var.set("N/A")
+            self.result_mape_var.set("N/A")
+        except Exception:
+            pass
+
+        self._set_status(f"Refresh complete ({removed} files removed)")
     
     def destroy(self):
         """
